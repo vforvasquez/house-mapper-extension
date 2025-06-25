@@ -1,0 +1,19 @@
+{
+	"manifest_version": 3,
+	"name": "Zillow Extension",
+	"version": "1.0",
+	"permissions": ["activeTab", "scripting", "storage", "tabs"],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"action": {
+		"default_title": "Save House Data",
+		"default_popup": "popup.html"
+	},
+	"content_scripts": [
+		{
+			"matches": ["*://*.zillow.com/*"],
+			"js": ["content.js"]
+		}
+	]
+}
