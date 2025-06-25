@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 	const addressDiv = document.getElementById("address")
-	const saveButton = document.getElementById("saveButton")
 	const exportButton = document.getElementById("exportButton")
+	const deleteButton = document.getElementById("deleteButton")
 	const statusDiv = document.getElementById("status")
 	const errorDiv = document.getElementById("error")
 
@@ -39,8 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
 				hasPermission = await checkStoragePermission()
 				if (!hasPermission) {
 					errorDiv.textContent = "Storage permission denied. Cannot save data."
-					saveButton.disabled = true
 					exportButton.disabled = true
+					deleteButton.disabled = true
 					return false
 				}
 			}
@@ -48,8 +48,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		} catch (error) {
 			console.error("Permission error:", error)
 			errorDiv.textContent = `Failed to initialize: ${error.message}`
-			saveButton.disabled = true
 			exportButton.disabled = true
+			deleteButton.disabled = true
 			return false
 		}
 	}
@@ -60,7 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
 			if (!tabs[0]) {
 				addressDiv.textContent = "No active tab found."
-				saveButton.disabled = true
+				exportButton.disabled = true
+				deleteButton.disabled = true
 				errorDiv.textContent = "Please open a Zillow page."
 				return
 			}
@@ -71,14 +72,16 @@ document.addEventListener("DOMContentLoaded", () => {
 				(response) => {
 					if (chrome.runtime.lastError) {
 						addressDiv.textContent = "Error extracting data."
-						saveButton.disabled = true
+						exportButton.disabled = true
+						deleteButton.disabled = true
 						errorDiv.textContent = chrome.runtime.lastError.message
 						return
 					}
 
 					if (!response || response.gdpClientCache === null) {
 						addressDiv.textContent = "No data found."
-						saveButton.disabled = true
+						exportButton.disabled = true
+						deleteButton.disabled = true
 						errorDiv.textContent =
 							response?.error || "Could not parse property data on this page."
 						return
@@ -87,54 +90,37 @@ document.addEventListener("DOMContentLoaded", () => {
 					// Display generic message
 					addressDiv.textContent = "Data for this property saved"
 
-					// Store gdpClientCache as JSON string in data attribute
-					saveButton.setAttribute(
-						"data-gdpClientCache",
-						JSON.stringify(response.gdpClientCache)
+					deleteButton.setAttribute(
+						"data-zpid",
+						Object.keys(response.gdpClientCache)[0]
 					)
-					saveButton.disabled = false
+					exportButton.disabled = false
+					deleteButton.disabled = false
 				}
 			)
 		})
 
-		saveButton.addEventListener("click", () => {
+		deleteButton.addEventListener("click", () => {
 			statusDiv.textContent = ""
 			errorDiv.textContent = ""
-
-			if (
-				addressDiv.textContent === "No data found." ||
-				addressDiv.textContent === "Loading address..."
-			) {
-				errorDiv.textContent = "No valid data to save."
-				return
-			}
-
-			const gdpClientCacheStr = saveButton.getAttribute("data-gdpClientCache")
-			if (!gdpClientCacheStr) {
-				errorDiv.textContent = "Missing property data."
-				return
-			}
-
-			let gdpClientCache
-			try {
-				gdpClientCache = JSON.parse(gdpClientCacheStr)
-			} catch (error) {
-				errorDiv.textContent = "Invalid property data format."
-				console.error("Error parsing gdpClientCache:", error)
+			const zpid = deleteButton.getAttribute("data-zpid")
+			if (!zpid) {
+				errorDiv.textContent = "Missing property zpid."
 				return
 			}
 
 			chrome.runtime.sendMessage(
-				{ action: "saveAddress", gdpClientCache },
+				{ action: "deleteAddress", zpid },
 				(response) => {
 					if (response && response.success) {
-						statusDiv.textContent =
-							'Data saved successfully! Use "Export Addresses" to download addresses.json.'
-					} else {
-						errorDiv.textContent =
-							response && response.error
-								? response.error
-								: "Failed to save data."
+						if (response && response.success) {
+							statusDiv.textContent = "Data deleted successfully!"
+						} else {
+							errorDiv.textContent =
+								response && response.error
+									? response.error
+									: "Failed to delete data."
+						}
 					}
 				}
 			)
