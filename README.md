@@ -1,6 +1,6 @@
-# zillow-map
+# house-mapper-extension
 
-Browser extension for gathering JSON data from Zillow pages.
+Browser extension for gathering JSON data from property listings.
 
 ## Project Setup (For Chrome)
 
